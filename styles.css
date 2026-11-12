@@ -1,0 +1,247 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    background: #f2f7fa;
+    display: flex;
+    margin: 0;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 16px;
+    background: #80d7ff;
+}
+
+.header h2 {
+    font-family: serif;
+    color: #072736;
+    font-size: 1.4rem;
+    font-weight: normal;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.header > h2:first-child {
+    font-weight: bold;
+    letter-spacing: 1px;
+    font-size: 1.7rem;
+}
+
+.content {
+    display: flex;
+    gap: 40px;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 960px;
+    padding: 40px 16px;
+    margin: 0 auto;
+}
+
+canvas {
+    width: 450px;
+    height: 450px;
+    margin-top: 30px;
+    background: white;
+    display: block;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: #ffffff;
+    font-size: 20px;
+    padding: 24px;
+    border-radius: 10px;
+}
+
+.form__group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid #2f3642;
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.form__group legend,
+.form__group label,
+.form__group select {
+    font-family: serif;
+    color: #072736;
+    font-size: 20px;
+}
+
+.form__group select {
+    padding: 10px 14px;
+    margin-top: 4px;
+    margin-bottom: 10px;
+    border: 1px solid #9c9a9a;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 20px;
+    color: #2f3642;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form__group select:hover {
+    border-color: #666565;
+}
+
+.form__group option {
+    color: #072736;
+    background: #ffffff;
+}
+
+.form__group input[type="text"] {
+    padding: 10px 14px;
+    margin-top: 4px;
+    border: 1px solid #9c9a9a;
+    border-radius: 6px;
+    font-size: 20px;
+    font-family: inherit;
+    color: #2f3642;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form__group input[type="text"]:hover {
+    border-color: #666565;
+}
+
+.form__group input[type="text"].invalid {
+    border-color: #de3131;
+    background: #fff0f0;
+}
+
+
+.form__group input[type="text"]:valid {
+    border-color: #20b020;
+    background: #e6fce6;
+}
+
+.form__group input[type="text"]::-webkit-outer-spin-button,
+.form__group input[type="text"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.error-message {
+    color: red;
+    font-size: 14px;
+    white-space: pre-line;
+}
+
+.invalid {
+    border: 2px solid red;
+}
+
+.radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.radio-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 4px;
+    font-size: 20px;
+    border-radius: 10px;
+}
+
+.radio-group label:hover {
+    color: #1e90ff;
+    background: #f0f8ff;
+}
+
+.radio-group label > input[type="radio"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.radio-group label > input[type="radio"]:checked {
+    accent-color: #1e90ff;
+}
+
+
+.form__actions {
+    display: flex;
+    gap: 12px;
+}
+
+.form__actions button {
+    flex: 1;
+    white-space: nowrap;
+}
+
+.form__clear {
+    padding: 12px 20px;
+    border: none;
+    font-family: serif;
+    border-radius: 10px;
+    background: #80d7ff;
+    color: black;
+    font-size: 22px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.form__submit {
+    padding: 12px 20px;
+    border: none;
+    font-family: serif;
+    border-radius: 10px;
+    background: #80d7ff;
+    color: black;
+    font-size: 22px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+
+.form__submit:hover,
+.form__clear:hover {
+    background: #4cc5fc;
+}
+
+.results {
+    width: 100%;
+    max-width: 960px;
+    padding: 0 16px 32px;
+    margin: 0;
+}
+
+.results__table {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-size: 18px;
+}
+
+.results__table th,
+.results__table td {
+    padding: 10px 12px;
+    text-align: center;
+}
+
+.results__table thead th {
+    background: #80d7ff;
+    color: #072736;
+    font-family: serif;
+}

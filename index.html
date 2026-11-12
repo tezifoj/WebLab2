@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Лабораторная работа по веб-программированию №1</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <header class="header">
+      <h2>Рожкова Александра Владимировна</h2>
+      <h2>Группа: P3214 | Вариант: 501880</h2>
+    </header>
+
+    <main class="content">
+        <canvas id="canvas" width="448" height="448"></canvas>
+
+        <form id="point" class="form" novalidate>
+            <fieldset class="form__group">
+                <legend>Выберите значение координаты X:</legend>
+                <select id="x-select" name="x">
+                    <option value="-3">-3</option>
+                    <option value="-2">-2</option>
+                    <option value="-1">-1</option>
+                    <option value="0" selected>0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+            </fieldset>
+
+            <fieldset class="form__group">
+                <legend>Введите значение координаты Y:</legend>
+                <input
+                    id="y-input"
+                    name="y"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    required
+                    maxlength="20"
+                    placeholder="-5...3"
+                />
+                <span class="error" id="y-error"></span>
+            </fieldset>
+
+            <fieldset class="form__group">
+                <legend>Выберите значение радиуса R:</legend>
+                <div class="radio-group">
+                    <label><input type="radio" name="r" value="1" required /> 1</label>
+                    <label><input type="radio" name="r" value="1.5" /> 1.5</label>
+                    <label><input type="radio" name="r" value="2" /> 2</label>
+                    <label><input type="radio" name="r" value="2.5" /> 2.5</label>
+                    <label><input type="radio" name="r" value="3" /> 3</label>
+                </div>
+                <span class="error" id="r-error"></span>
+            </fieldset>
+
+            <div id="error-message" class="error-message"> </div>
+            <div class="form__actions">
+                <button type="submit" class="form__submit">Проверить</button>
+                <button type="button" id="clear-btn" class="form__clear">Очистить таблицу</button>
+            </div>
+        </form>
+    </main>
+
+    <section class="results">
+        <table class="results__table" id="results-table">
+            <thead>
+            <tr>
+                <th>X</th>
+                <th>Y</th>
+                <th>R</th>
+                <th>Результат</th>
+                <th>Время</th>
+                <th>Время работы, мкс</th>
+            </tr>
+            </thead>
+            <tbody id="results-body"></tbody>
+        </table>
+    </section>
+
+<script src="script.js"></script>
+
+</body>
+
+</html>

@@ -127,16 +127,14 @@ function coordinateAxis() {
 
 }
 
-const MIN_R = 2;
-const MAX_R = 5;
-const MIN_Y = -3;
+const MIN_Y = -5;
 const MAX_Y = 3;
 const ALLOWED_X = [-3, -2, -1, 0, 1, 2, 3, 4, 5];
+const MAX_R = 3;
+const ALLOWED_R = [1, 1.5, 2, 2.5, 3];
 
 function getScale() {
-    const canvas = document.getElementById("canvas");
-    const W = canvas.clientWidth;
-    return (W / 2 - 64) / MAX_R;
+    return 32;
 }
 
 function toPx(x, y) {
@@ -156,36 +154,37 @@ function toPx(x, y) {
 function drawArea(R) {
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
+    const scale = getScale();
+    const center = toPx(0, 0);
 
     ctx.fillStyle = "rgba(79, 152, 255, 0.5)";
 
-    ctx.beginPath();
-    const t1 = toPx(0, 0);
-    const t2 = toPx(-R, 0);
-    const t3 = toPx(0, R);
-    ctx.moveTo(t1.px, t1.py);
-    ctx.lineTo(t2.px, t2.py);
-    ctx.lineTo(t3.px, t3.py);
-    ctx.closePath();
-    ctx.fill();
+    // I четверть
+    const top = toPx(0, R / 2);
+    ctx.fillRect(top.px, top.py, R * scale, (R / 2) * scale);
 
-    const center = toPx(0, 0);
-    const radiusPx = (R / 2) * getScale();
+    // II четверть
+    const a = toPx(-R, 0);
+    const b = toPx(0, R / 2);
     ctx.beginPath();
     ctx.moveTo(center.px, center.py);
-    ctx.arc(center.px, center.py, radiusPx, 0, Math.PI / 2, false);
+    ctx.lineTo(a.px, a.py);
+    ctx.lineTo(b.px, b.py);
     ctx.closePath();
     ctx.fill();
 
-    const c1 = toPx(-R /2, 0);
-    const c2 = toPx(0, -R);
-    ctx.fillRect(c1.px, c1.py, c2.px - c1.px, c2.py - c1.py);
+    // III четверть
+    ctx.beginPath();
+    ctx.moveTo(center.px, center.py);
+    ctx.arc(center.px, center.py, R * scale, Math.PI / 2, Math.PI, false);
+    ctx.closePath();
+    ctx.fill();
 }
 
 function isHit(x, y, R) {
-    if (x <= 0 && y >= 0 && y <= x + R) return true;
-    if (x >= 0 && y <= 0 && (x * x + y * y) <= (R / 2) ** 2) return true;
-    if (x >= -R / 2 && x <= 0 && y >= -R && y <= 0) return true;
+    if (x >= 0 && x <= R && y >= 0 && y <= (R / 2)) return true;
+    if (x <= 0 && y >= 0 && 2 * y <= x + R) return true;
+    if (x <= 0 && y <= 0 && x * x + y * y <= R * R) return true;
     return false;
 }
 
@@ -222,7 +221,7 @@ function isValidPoint(p) {
         typeof p === "object" &&
         typeof p.x === "number" && ALLOWED_X.includes(p.x) &&
         typeof p.y === "number" && Number.isFinite(p.y) && p.y >= MIN_Y && p.y <= MAX_Y &&
-        typeof p.r === "number" && Number.isFinite(p.r) && p.r >= MIN_R && p.r <= MAX_R &&
+        typeof p.r === "number" && ALLOWED_R.includes(p.r) &&
         typeof p.time === "string" && !Number.isNaN(new Date(p.time).getTime())
     );
 }
@@ -275,9 +274,9 @@ function renderTable() {
 }
 
 function validateNumberInput(input, min, max) {
-    const value = input.value.trim();
+    const value = input.value.trim().replace(",", ".");
 
-    input.classList.remove("invalid");
+    input.classList.remove("invalid", "valid");
 
     if (value === "") {
         input.classList.add("invalid");
@@ -295,22 +294,34 @@ function validateNumberInput(input, min, max) {
         input.classList.add("invalid");
         return {value: null, error: `Число от ${min} до ${max}` };
     }
+    input.classList.add("valid");
     return {value: num, error: null };
 }
 
-const xRadios = Array.from(document.querySelectorAll('input[name="x"]'));
+const rRadios = Array.from(document.querySelectorAll('input[name="r"]'));
 
-function getSelectedX() {
-    const idx = xRadios.findIndex((r) => r.checked);
+function getSelectedR() {
+    const idx = rRadios.findIndex((request) => request.checked);
 
     if (idx === -1) {
         return { value: null, error: "Выберите значение" };
     }
 
-    return { value: ALLOWED_X[idx], error: null };
+    return { value: ALLOWED_R[idx], error: null };
 }
 
-let currentR = 2;
+const xSelect = document.getElementById("x-select");
+
+function getSelectedX() {
+    const value = Number(xSelect.value);
+    if (xSelect.value === "" || !ALLOWED_X.includes(value)) {
+        return { value: null, error: "Выберите значение" };
+    }
+
+    return { value, error: null };
+}
+
+let currentR = 1;
 function redrawAll() {
     coordinateAxis();
     drawArea(currentR);
@@ -328,11 +339,11 @@ document.getElementById("point").addEventListener("submit", (event) => {
     event.preventDefault();
 
     const yInput = document.getElementById("y-input");
-    const rInput = document.getElementById("r-input");
 
+    const yRes = validateNumberInput(yInput, -5, 3);
     const xRes = getSelectedX();
-    const yRes = validateNumberInput(yInput, -3, 3);
-    const rRes = validateNumberInput(rInput, 2, 5);
+    const rRes = getSelectedR();
+
 
     const messages = [];
     if (xRes.error !== null) messages.push("X: " + xRes.error);
@@ -376,16 +387,26 @@ document.getElementById("point").addEventListener("input", () => {
     errorMessage.textContent = "";
 });
 
-document.getElementById("r-input").addEventListener("input", (e) => {
-    const val = parseFloat(e.target.value);
-    if (!isNaN(val) && val >= MIN_R && val <= MAX_R) {
-        currentR = val;
-        redrawAll();
+const yInput = document.getElementById("y-input");
+const yError = document.getElementById("y-error");
+
+yInput.addEventListener("input", () => {
+    if (yInput.value.trim() === "") {
+        yInput.classList.remove("invalid", "valid");
+        return;
     }
+    validateNumberInput(yInput, MIN_Y, MAX_Y);
+});
+
+rRadios.forEach((radio) => {
+    radio.addEventListener("change", () => {
+        currentR = Number(radio.value);
+        redrawAll();
+    });
 });
 
 setupCanvas();
-coordinateAxis();
+redrawAll();
 renderTable();
 
 window.addEventListener("resize", () => {

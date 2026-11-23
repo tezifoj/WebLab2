@@ -202,53 +202,48 @@ function drawPoint(x, y, R, hit) {
     ctx.stroke();
 }
 
-function formatDate(iso) {
-    return new Date(iso).toLocaleString("ru-RU", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-    });
-}
+const API_URL = "/fcgi-bin/server.jar";
 
-const pointsStorageKey = 'app_points';
+let results = []; // последняя история, полученная от сервера
 
-function isValidPoint(p) {
-    return (
-        p !== null &&
-        typeof p === "object" &&
-        typeof p.x === "number" && ALLOWED_X.includes(p.x) &&
-        typeof p.y === "number" && Number.isFinite(p.y) && p.y >= MIN_Y && p.y <= MAX_Y &&
-        typeof p.r === "number" && ALLOWED_R.includes(p.r) &&
-        typeof p.time === "string" && !Number.isNaN(new Date(p.time).getTime())
-    );
-}
-
-function loadPoints() {
-    try {
-        const raw = localStorage.getItem(pointsStorageKey);
-        const data = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(data)) return [];
-        return data
-        .filter(isValidPoint)
-        .map((p) => ({ ...p, hit: isHit(p.x, p.y, p.r) })); // результат пересчитываем
-    } catch {
-         return [];
+async function request(method, body) {
+    const options = { method };
+    if (body) {
+        options.headers = { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" };
+        options.body = body;
     }
+
+    let response;
+    try {
+        response = await fetch(API_URL, options);
+    } catch {
+        throw new Error("Сервер недоступен");
+    }
+
+    let data;
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(`Некорректный ответ сервера (HTTP ${response.status})`);
+    }
+
+    if (!response.ok) {
+        throw new Error(data.error || `Ошибка HTTP ${response.status}`);
+    }
+    return data;
 }
 
-function savePoints(points) {
-    localStorage.setItem(pointsStorageKey, JSON.stringify(points));
+function applyResults(data) {
+    results = Array.isArray(data.results) ? data.results : [];
+    renderTable();
+    redrawAll();
 }
 
 function renderTable() {
     const tbody = document.getElementById("results-body");
-    const points = loadPoints();
     tbody.innerHTML = "";
 
-    points.reverse().forEach((p) => {
+    [...results].reverse().forEach((p) => {
         const tr = document.createElement("tr");
 
         const tdX = document.createElement("td");
@@ -265,9 +260,12 @@ function renderTable() {
         tdHit.textContent = p.hit ? "Попадание" : "Промах";
 
         const tdTime = document.createElement("td");
-        tdTime.textContent = formatDate(p.time);
+        tdTime.textContent = p.time;
 
-        tr.append(tdX, tdY, tdR, tdHit, tdTime);
+        const tdExec = document.createElement("td");
+        tdExec.textContent = (p.execNanos / 1000).toFixed(1);
+
+        tr.append(tdX, tdY, tdR, tdHit, tdTime, tdExec);
         tbody.appendChild(tr);
 
     });
@@ -325,22 +323,21 @@ let currentR = 1;
 function redrawAll() {
     coordinateAxis();
     drawArea(currentR);
-    const points = loadPoints();
 
-    points.forEach((p) => {
-        const hit = isHit(p.x, p.y, currentR);
-        drawPoint(p.x, p.y, currentR, hit);
+    results.forEach((p) => {
+        const x = Number(p.x);
+        const y = Number(p.y);
+        const hit = isHit(x, y, currentR);
+        drawPoint(x, y, currentR, hit);
     });
 }
 
 const errorMessage = document.getElementById("error-message");
 
-document.getElementById("point").addEventListener("submit", (event) => {
+document.getElementById("point").addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const yInput = document.getElementById("y-input");
-
-    const yRes = validateNumberInput(yInput, -5, 3);
+    const yRes = validateNumberInput(yInput, MIN_Y, MAX_Y);
     const xRes = getSelectedX();
     const rRes = getSelectedR();
 
@@ -357,30 +354,28 @@ document.getElementById("point").addEventListener("submit", (event) => {
 
     errorMessage.textContent = "";
 
-    const x = xRes.value;
-    const y = yRes.value;
-    const r = rRes.value;
-    const hit = isHit(x, y, r);
+    const body = new URLSearchParams({
+        x: xRes.value,
+        y: yInput.value.trim().replace(",", "."),
+        r: rRes.value,
+    });
 
-    const point = {
-        x, y, r, hit,
-        time: new Date().toISOString(),
+    try {
+        const data = await request("POST", body);
+        currentR = rRes.value;
+        applyResults(data);
+    } catch (e) {
+        errorMessage.textContent = e.message;
     }
-
-    const points = loadPoints();
-    points.push(point);
-    savePoints(points);
-
-    currentR = r;
-    renderTable();
-    redrawAll();
 });
 
-document.getElementById("clear-btn").addEventListener("click", () => {
-    localStorage.removeItem(pointsStorageKey);
+document.getElementById("clear-btn").addEventListener("click", async () => {
     errorMessage.textContent = "";
-    renderTable();
-    redrawAll();
+    try {
+        applyResults(await request("DELETE"));
+    } catch (e) {
+        errorMessage.textContent = e.message;
+    }
 });
 
 document.getElementById("point").addEventListener("input", () => {
@@ -388,7 +383,6 @@ document.getElementById("point").addEventListener("input", () => {
 });
 
 const yInput = document.getElementById("y-input");
-const yError = document.getElementById("y-error");
 
 yInput.addEventListener("input", () => {
     if (yInput.value.trim() === "") {
@@ -407,7 +401,12 @@ rRadios.forEach((radio) => {
 
 setupCanvas();
 redrawAll();
-renderTable();
+
+request("GET")
+    .then(applyResults)
+    .catch((e) => {
+        errorMessage.textContent = e.message;
+    });
 
 window.addEventListener("resize", () => {
     setupCanvas();

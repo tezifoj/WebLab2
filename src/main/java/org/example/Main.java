@@ -4,19 +4,22 @@ import com.fastcgi.FCGIInterface;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
         FCGIInterface fcgi = new FCGIInterface();
 
         while (fcgi.FCGIaccept() >= 0) {
+            long start = System.nanoTime();
             try {
-                handleRequest();
+                handleRequest(start);
             } catch (Exception e) {
                 e.printStackTrace();
                 send(500, "{\"error\":\"Внутренняя ошибка сервера\"}");
@@ -24,21 +27,24 @@ public class Main {
         }
     }
 
-    private static void handleRequest() throws IOException {
+    private static void handleRequest(long start) throws IOException {
         Properties params = FCGIInterface.request.params;
         String method = params.getProperty("REQUEST_METHOD", "");
 
         switch (method) {
-            case "GET" -> send(200, "{\"message\":\" TODO история\"}");
-            case "POST" -> handlePost(params);
-            case "DELETE" -> send(200, "{\"message\":\" TODO очистка\"}");
+            case "GET" -> send(200, historyJson());
+            case "POST" -> handlePost(params, start);
+            case "DELETE" -> {
+                history.clear();
+                send(200, historyJson());
+            }
             default ->  send(405, "{\"error\":\"Метод не поддерживается\"}");
         }
     }
 
     private static final int MAX_BODY = 1024;
 
-    private static void handlePost(Properties params) throws IOException {
+    private static void handlePost(Properties params, long start) throws IOException {
         int length;
         try {
             length = Integer.parseInt(params.getProperty("CONTENT_LENGTH", "0").trim());
@@ -57,9 +63,34 @@ public class Main {
 
         Map<String, String> form = parseForm(readBody(length));
 
-        String json = "{\"x\":\"" + form.get("x") + "\",\"y\":\"" + form.get("y")
-                + "\",\"r\":\"" + form.get("r") + "\"}";
-        send(200, json);
+        Validator.Validated data;
+        try {
+            data = Validator.validate(form.get("x"), form.get("y"), form.get("r"));
+        } catch (Validator.ValidationException e) {
+            send(400, "{\"error\":\"" + escape(e.getMessage()) + "\"}");
+            return;
+        }
+
+        boolean hit = AreaChecker.isHit(data.x(), data.y(), data.r());
+        String now = ZonedDateTime.now(ZONE).format(TIME_FORMAT);
+        long execNanos = System.nanoTime() - start;
+
+        history.add(new Result(data.x(), data.y(), data.r(), hit, now, execNanos));
+        send(200, historyJson());
+    }
+
+    private static String historyJson() {
+        StringBuilder sb = new StringBuilder("{\"results\":[");
+        for (int i = 0; i < history.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append(history.get(i).toJson());
+        }
+        return sb.append("]}").toString();
+    }
+
+    // Экранирование для вставки текста в JSON-строку
+    private static String escape(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
     }
 
     private static String readBody(int length) throws IOException {
@@ -115,4 +146,21 @@ public class Main {
             default ->  "Internal Server Error";
         };
     }
+
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+    private static final ZoneId ZONE = ZoneId.of("Europe/Moscow");
+
+    private static final List<Result> history = new ArrayList<>();
+
+    record Result(int x, BigDecimal y, BigDecimal r, boolean hit, String time, long execNanos) {
+        String toJson() {
+            return "{\"x\":" + x
+                    + ",\"y\":\"" + y.toPlainString() + "\""
+                    + ",\"r\":\"" + r.toPlainString() + "\""
+                    + ",\"hit\":" + hit
+                    + ",\"time\":\"" + time + "\""
+                    + ",\"execNanos\":" + execNanos + "}";
+        }
+    }
+
 }
